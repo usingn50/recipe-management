@@ -6,6 +6,10 @@ public class RecipeManager : IRecipeManager
 {
     private readonly Dictionary<int, Recipe> recipes = new();
     private readonly List<string> shoppingList = new();
+    private readonly LinkedList<int> cookingPlan = new();
+    private readonly Stack<int> removalHistory = new();
+    private readonly Queue<string> instructionQueue = new();
+    private int jsoncount;
 
     public void AddRecipe(Recipe recipe)
     {
@@ -32,17 +36,60 @@ public class RecipeManager : IRecipeManager
 
     public void ClearShoppingList() => shoppingList.Clear();
 
-    public void AddRecipeToPlan(int recipeId) => throw new NotImplementedException();
+    public void AddRecipeToPlan(int recipeId)
+    {
+        EnsureRecipeExists(recipeId);
+        if (!cookingPlan.Contains(recipeId))
+        {
+            cookingPlan.AddLast(recipeId);
+        }
+    }
 
-    public bool RemoveRecipeFromPlan(int recipeId) => throw new NotImplementedException();
+    public bool RemoveRecipeFromPlan(int recipeId)
+    {
+        if (!cookingPlan.Remove(recipeId))
+        {
+            return false;
+        }
 
-    public IReadOnlyList<int> GetCookingPlan() => Array.Empty<int>();
+        removalHistory.Push(recipeId);
+        return true;
+    }
 
-    public bool RestoreLastRemovedRecipe() => false;
+    public IReadOnlyList<int> GetCookingPlan() => cookingPlan.ToList().AsReadOnly();
 
-    public bool StartCookingSession(int recipeId) => throw new NotImplementedException();
+    public bool RestoreLastRemovedRecipe()
+    {
+        if (removalHistory.Count == 0)
+        {
+            return false;
+        }
 
-    public string? PeekNextInstruction() => null;
+        cookingPlan.AddLast(removalHistory.Pop());
+        return true;
+    }
 
-    public string? CompleteNextInstruction() => null;
+    public bool StartCookingSession(int recipeId)
+    {
+        var recipe = GetRecipe(recipeId) ?? throw new KeyNotFoundException($"Recipe {recipeId} was not found.");
+        instructionQueue.Clear();
+        foreach (var instruction in recipe.Instructions)
+        {
+            instructionQueue.Enqueue(instruction);
+        }
+
+        return true;
+    }
+
+    public string? PeekNextInstruction() => instructionQueue.TryPeek(out var instruction) ? instruction : null;
+
+    public string? CompleteNextInstruction() => instructionQueue.TryDequeue(out var instruction) ? instruction : null;
+
+    private void EnsureRecipeExists(int recipeId)
+    {
+        if (!recipes.ContainsKey(recipeId))
+        {
+            throw new KeyNotFoundException($"Recipe {recipeId} was not found.");
+        }
+    }
 }
