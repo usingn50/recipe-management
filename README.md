@@ -25,3 +25,13 @@ dotnet run --project RecipeManagement.Application
 - `RecipeManagement.Core` — Recipe models, JSON loading, and management logic.
 - `RecipeManagement.Tests` — xUnit tests for the core functionality.
 - `data/recipes.json` — Sample recipe data.
+
+## Data structures demonstrated
+
+- `Dictionary<int, Recipe>` stores the recipe index.
+- `List<string>` stores shopping-list ingredients in insertion order.
+- `LinkedList<int>` stores the cooking plan without duplicate recipe IDs.
+- `Stack<int>` stores recipe IDs removed from the cooking plan for undo support.
+- `Queue<string>` processes cooking instructions in first-in, first-out order.
+
+The test suite covers normal operations, duplicate and missing IDs, empty stack and queue behavior, and integration between the shopping list and cooking plan.
