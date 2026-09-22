@@ -4,22 +4,21 @@ namespace RecipeManagement.Core;
 
 public interface IRecipeManager
 {
-    void AddRecipe(Recipe recipe);
-    Recipe? GetRecipe(int id);
-    bool RemoveRecipe(int id);
-    IEnumerable<Recipe> GetAllRecipes();
+    bool AddRecipe(Recipe recipe);
+    Recipe? FindRecipe(int recipeId);
+    bool RemoveRecipe(int recipeId);
+    IReadOnlyList<Recipe> GetRecipes();
 
-    void AddRecipeIngredientsToShoppingList(int recipeId);
+    bool AddRecipeToShoppingList(int recipeId);
     IReadOnlyList<string> GetShoppingList();
     void ClearShoppingList();
 
-    void AddRecipeToPlan(int recipeId);
-    bool RemoveRecipeFromPlan(int recipeId);
+    bool AddToCookingPlan(int recipeId);
+    bool RemoveFromCookingPlan(int recipeId);
     IReadOnlyList<int> GetCookingPlan();
-
     bool RestoreLastRemovedRecipe();
 
-    bool StartCookingSession(int recipeId);
+    bool StartCooking(int recipeId);
     string? PeekNextInstruction();
     string? CompleteNextInstruction();
 }

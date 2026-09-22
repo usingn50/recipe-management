@@ -3,16 +3,19 @@ using RecipeManagement.Core.Models;
 
 namespace RecipeManagement.Core;
 
-public class RecipeLoader
+public static class RecipeLoader
 {
-    public List<Recipe> LoadRecipes(string path)
+    public static List<Recipe> Load(string filePath)
     {
-        var json = File.ReadAllText(path);
-        var data = JsonSerializer.Deserialize<RecipeDataFile>(json, new JsonSerializerOptions
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Recipe data file was not found.", filePath);
+        }
+
+        var json = File.ReadAllText(filePath);
+        return JsonSerializer.Deserialize<List<Recipe>>(json, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
-        });
-
-        return data?.Recipes ?? new List<Recipe>();
+        }) ?? new List<Recipe>();
     }
 }
