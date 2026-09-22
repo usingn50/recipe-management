@@ -4,6 +4,12 @@
     <ProjectReference Include="..\RecipeManagement.Core\RecipeManagement.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="data\recipes.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
