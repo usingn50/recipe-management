@@ -1,95 +1,154 @@
+using System;
+using System.Collections.Generic;
 using RecipeManagement.Core.Models;
 
-namespace RecipeManagement.Core;
-
-public class RecipeManager : IRecipeManager
+namespace RecipeManagement.Core
 {
-    private readonly Dictionary<int, Recipe> recipes = new();
-    private readonly List<string> shoppingList = new();
-    private readonly LinkedList<int> cookingPlan = new();
-    private readonly Stack<int> removalHistory = new();
-    private readonly Queue<string> instructionQueue = new();
-    private int jsoncount;
-
-    public void AddRecipe(Recipe recipe)
+    public sealed class RecipeManager : IRecipeManager
     {
-        ArgumentNullException.ThrowIfNull(recipe);
-        if (!recipes.TryAdd(recipe.Id, recipe))
+        private readonly Dictionary<int, Recipe> recipes = new Dictionary<int, Recipe>();
+        private readonly List<string> shoppingList = new List<string>();
+        private readonly LinkedList<int> cookingPlan = new LinkedList<int>();
+        private readonly Stack<int> recentlyRemoved = new Stack<int>();
+        private readonly Queue<string> instructionQueue = new Queue<string>();
+
+        public int jsoncount { get; private set; }
+
+        public bool AddRecipe(Recipe recipe)
         {
-            throw new ArgumentException($"A recipe with ID {recipe.Id} already exists.", nameof(recipe));
+            if (recipe == null)
+                throw new ArgumentNullException(nameof(recipe));
+
+            if (recipes.ContainsKey(recipe.Id))
+                return false;
+
+            recipes.Add(recipe.Id, recipe);
+            jsoncount = recipes.Count;
+            return true;
         }
-    }
 
-    public Recipe? GetRecipe(int id) => recipes.GetValueOrDefault(id);
-
-    public bool RemoveRecipe(int id) => recipes.Remove(id);
-
-    public IEnumerable<Recipe> GetAllRecipes() => recipes.Values;
-
-    public void AddRecipeIngredientsToShoppingList(int recipeId)
-    {
-        var recipe = GetRecipe(recipeId) ?? throw new KeyNotFoundException($"Recipe {recipeId} was not found.");
-        shoppingList.AddRange(recipe.Ingredients);
-    }
-
-    public IReadOnlyList<string> GetShoppingList() => shoppingList.AsReadOnly();
-
-    public void ClearShoppingList() => shoppingList.Clear();
-
-    public void AddRecipeToPlan(int recipeId)
-    {
-        EnsureRecipeExists(recipeId);
-        if (!cookingPlan.Contains(recipeId))
+        public Recipe? FindRecipe(int recipeId)
         {
+            if (recipes.ContainsKey(recipeId))
+                return recipes[recipeId];
+
+            return null;
+        }
+
+        public bool RemoveRecipe(int recipeId)
+        {
+            if (!recipes.ContainsKey(recipeId))
+                return false;
+
+            recipes.Remove(recipeId);
+            jsoncount = recipes.Count;
+            return true;
+        }
+
+        public IReadOnlyList<Recipe> GetRecipes()
+        {
+            return new List<Recipe>(recipes.Values);
+        }
+
+        public bool AddRecipeToShoppingList(int recipeId)
+        {
+            Recipe? recipe = FindRecipe(recipeId);
+
+            if (recipe == null)
+                return false;
+
+            foreach (string ingredient in recipe.Ingredients)
+            {
+                shoppingList.Add(ingredient);
+            }
+
+            return true;
+        }
+
+        public IReadOnlyList<string> GetShoppingList()
+        {
+            return new List<string>(shoppingList);
+        }
+
+        public void ClearShoppingList()
+        {
+            shoppingList.Clear();
+        }
+
+        public bool AddToCookingPlan(int recipeId)
+        {
+            if (FindRecipe(recipeId) == null)
+                return false;
+
+            if (cookingPlan.Contains(recipeId))
+                return false;
+
             cookingPlan.AddLast(recipeId);
-        }
-    }
-
-    public bool RemoveRecipeFromPlan(int recipeId)
-    {
-        if (!cookingPlan.Remove(recipeId))
-        {
-            return false;
+            return true;
         }
 
-        removalHistory.Push(recipeId);
-        return true;
-    }
-
-    public IReadOnlyList<int> GetCookingPlan() => cookingPlan.ToList().AsReadOnly();
-
-    public bool RestoreLastRemovedRecipe()
-    {
-        if (removalHistory.Count == 0)
+        public bool RemoveFromCookingPlan(int recipeId)
         {
-            return false;
+            LinkedListNode<int>? node = cookingPlan.Find(recipeId);
+
+            if (node == null)
+                return false;
+
+            cookingPlan.Remove(node);
+            recentlyRemoved.Push(recipeId);
+            return true;
         }
 
-        cookingPlan.AddLast(removalHistory.Pop());
-        return true;
-    }
-
-    public bool StartCookingSession(int recipeId)
-    {
-        var recipe = GetRecipe(recipeId) ?? throw new KeyNotFoundException($"Recipe {recipeId} was not found.");
-        instructionQueue.Clear();
-        foreach (var instruction in recipe.Instructions)
+        public IReadOnlyList<int> GetCookingPlan()
         {
-            instructionQueue.Enqueue(instruction);
+            return new List<int>(cookingPlan);
         }
 
-        return true;
-    }
-
-    public string? PeekNextInstruction() => instructionQueue.TryPeek(out var instruction) ? instruction : null;
-
-    public string? CompleteNextInstruction() => instructionQueue.TryDequeue(out var instruction) ? instruction : null;
-
-    private void EnsureRecipeExists(int recipeId)
-    {
-        if (!recipes.ContainsKey(recipeId))
+        public bool RestoreLastRemovedRecipe()
         {
-            throw new KeyNotFoundException($"Recipe {recipeId} was not found.");
+            if (recentlyRemoved.Count == 0)
+                return false;
+
+            int recipeId = recentlyRemoved.Pop();
+
+            if (cookingPlan.Contains(recipeId))
+                return false;
+
+            cookingPlan.AddLast(recipeId);
+            return true;
+        }
+
+        public bool StartCooking(int recipeId)
+        {
+            Recipe? recipe = FindRecipe(recipeId);
+
+            if (recipe == null)
+                return false;
+
+            instructionQueue.Clear();
+
+            foreach (string instruction in recipe.Instructions)
+            {
+                instructionQueue.Enqueue(instruction);
+            }
+
+            return true;
+        }
+
+        public string? PeekNextInstruction()
+        {
+            if (instructionQueue.Count == 0)
+                return null;
+
+            return instructionQueue.Peek();
+        }
+
+        public string? CompleteNextInstruction()
+        {
+            if (instructionQueue.Count == 0)
+                return null;
+
+            return instructionQueue.Dequeue();
         }
     }
 }
